@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>北陸 Bridge Navigator</title>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;700&family=DM+Sans:wght@300;400;500&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#16160e;--ink2:#3d3c30;--ink3:#7a7868;
+  --paper:#f7f5ef;--paper2:#eeeade;
+  --accent:#b5341c;--accent2:#d4873a;--gold:#c9a84c;
+  --border:#d8d4c0;--surface:#fff;
+  --green:#2d6a4f;--blue:#1a4a7a;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);font-size:14px}
+.app{display:grid;grid-template-columns:200px 1fr;grid-template-rows:52px 32px 1fr;height:100vh}
+
+/* topbar */
+.topbar{grid-column:1/-1;background:var(--ink);display:flex;align-items:center;padding:0 20px;gap:12px;border-bottom:2px solid var(--accent)}
+.logo{font-family:'Shippori Mincho',serif;color:#fff;font-size:16px}
+.logo b{color:var(--gold)}
+.chip{font-size:10px;background:rgba(255,255,255,.08);color:#aaa;padding:2px 8px;border-radius:20px;border:1px solid rgba(255,255,255,.1)}
+.chip.live::before{content:'● ';color:var(--green)}
+#top-date{margin-left:auto;font-size:11px;color:#555;font-family:'DM Mono',monospace}
+
+/* keybar */
+.keybar{grid-column:1/-1;background:#0f0f0a;display:flex;align-items:center;padding:0 20px;gap:8px;font-size:11px;color:#666;border-bottom:1px solid #222}
+.key-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#444}
+.key-dot.ok{background:var(--green)}
+.keybar input{background:transparent;border:none;color:#999;font-family:'DM Mono',monospace;font-size:11px;flex:1;outline:none;min-width:0}
+.keybar input::placeholder{color:#444}
+#key-status{white-space:nowrap;color:#555}
+
+/* sidebar */
+.sidebar{background:var(--ink);padding:12px 0;overflow-y:auto}
+.nav-group{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#444;padding:12px 16px 4px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:9px 18px;cursor:pointer;color:#888;font-size:12px;border-left:2px solid transparent;transition:all .15s}
+.nav-item:hover{color:#fff;background:rgba(255,255,255,.04)}
+.nav-item.on{color:#fff;border-left-color:var(--accent);background:rgba(181,52,28,.1)}
+.nav-item .dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+#tbadge{margin-left:auto;background:var(--accent);color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;min-width:16px;text-align:center}
+
+/* main area */
+.main{overflow:hidden;display:flex;flex-direction:column}
+.panel{display:none;flex:1;flex-direction:column;overflow:hidden}
+.panel.on{display:flex}
+.scroll{flex:1;overflow-y:auto;padding:24px}
+
+/* cards */
+.page-title{font-family:'Shippori Mincho',serif;font-size:22px;margin-bottom:4px}
+.page-sub{font-size:12px;color:var(--ink3);margin-bottom:20px;line-height:1.6}
+.cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--border)}
+.card.r::before{background:var(--accent)}
+.card.a::before{background:var(--accent2)}
+.card.g::before{background:var(--green)}
+.card.b::before{background:var(--blue)}
+.card.o::before{background:var(--gold)}
+.clabel{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.cval{font-family:'Shippori Mincho',serif;font-size:26px;color:var(--ink);margin-bottom:2px}
+.cdesc{font-size:11px;color:var(--ink3)}
+.phases{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.pcard{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px}
+.pnum{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);margin-bottom:6px}
+.ptitle{font-weight:500;font-size:13px;margin-bottom:6px}
+.pbadge{display:inline-block;font-size:10px;padding:2px 10px;border-radius:20px;margin-bottom:10px}
+.pbadge.now{background:#fef3e2;color:#92400e}
+.pbadge.build{background:#f0f0ee;color:#666}
+.pbadge.future{background:#e8f5e9;color:#1b5e20}
+.plist{list-style:none;font-size:11px;color:var(--ink2);line-height:1.9}
+.plist li::before{content:'→ ';color:var(--ink3)}
+
+/* tasks */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.ttitle{font-family:'Shippori Mincho',serif;font-size:20px;flex:1}
+.ftabs{display:flex;gap:3px;background:var(--paper2);padding:3px;border-radius:4px}
+.ftab{padding:4px 10px;border-radius:3px;font-size:11px;cursor:pointer;color:var(--ink3);border:none;background:transparent;font-family:'DM Sans',sans-serif;transition:all .15s}
+.ftab.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.btn{padding:7px 14px;border:none;border-radius:4px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;font-weight:500;transition:all .15s}
+.btn-p{background:var(--accent);color:#fff}
+.btn-p:hover{background:#9a2a14}
+.btn-p:disabled{background:#ccc;cursor:not-allowed}
+.btn-g{background:transparent;color:var(--ink2);border:1px solid var(--border)}
+.btn-g:hover{background:var(--paper2)}
+.btn-d{background:transparent;color:var(--accent);border:1px solid var(--border);padding:4px 8px;font-size:11px}
+.add-form{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:14px;display:none}
+.add-form.on{display:block}
+.add-row{display:grid;grid-template-columns:1fr auto auto;gap:8px}
+input[type=text],select,textarea{width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:4px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--ink);background:var(--surface);outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.tgroup{margin-bottom:20px}
+.tgroup-label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:10px}
+.titem{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;margin-bottom:6px;transition:border-color .15s}
+.titem:hover{border-color:var(--ink3)}
+.titem:hover .tactions{opacity:1}
+.titem.done{opacity:.5}
+.tcheck{width:16px;height:16px;border-radius:3px;border:1.5px solid var(--border);cursor:pointer;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:9px;transition:all .15s}
+.tcheck.on{background:var(--green);border-color:var(--green);color:#fff}
+.tbody{flex:1}
+.ttext{font-size:12px;font-weight:500;margin-bottom:3px;line-height:1.4}
+.titem.done .ttext{text-decoration:line-through;color:var(--ink3)}
+.ttag{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:500;display:inline-block}
+.ttag.now{background:#fee2e2;color:#991b1b}
+.ttag.soon{background:#fef3e2;color:#92400e}
+.ttag.later{background:#e8f5e9;color:#1b5e20}
+.tactions{opacity:0;transition:opacity .15s}
+
+/* chat */
+.chat-wrap{flex:1;display:grid;grid-template-columns:1fr 240px;overflow:hidden}
+.chat-main{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+.chat-msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+.msg{display:flex;gap:10px;max-width:88%}
+.msg.u{align-self:flex-end;flex-direction:row-reverse}
+.avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;font-family:'Shippori Mincho',serif}
+.msg.u .avatar{background:var(--ink);color:#fff}
+.msg.a .avatar{background:var(--accent);color:#fff}
+.bubble{padding:10px 14px;border-radius:8px;font-size:12px;line-height:1.75}
+.msg.u .bubble{background:var(--ink);color:#fff;border-radius:8px 2px 8px 8px}
+.msg.a .bubble{background:var(--surface);border:1px solid var(--border);border-radius:2px 8px 8px 8px}
+.chat-foot{padding:14px 16px;border-top:1px solid var(--border);background:var(--surface)}
+.chat-row{display:flex;gap:8px;align-items:flex-end}
+textarea.cinput{min-height:40px;max-height:100px;resize:none;padding:9px 12px;font-size:12px}
+.csend{padding:9px 16px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;white-space:nowrap;transition:background .15s;flex-shrink:0}
+.csend:hover{background:#9a2a14}
+.csend:disabled{background:#ccc;cursor:not-allowed}
+.chat-side{padding:16px;overflow-y:auto;background:var(--paper)}
+.side-title{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;margin-top:14px}
+.side-title:first-child{margin-top:0}
+.qbtn{display:block;width:100%;text-align:left;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--ink2);cursor:pointer;margin-bottom:5px;line-height:1.4;transition:all .15s;font-family:'DM Sans',sans-serif}
+.qbtn:hover{border-color:var(--accent);color:var(--accent)}
+.typing{display:flex;gap:4px;align-items:center;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:2px 8px 8px 8px}
+.typing span{width:5px;height:5px;border-radius:50%;background:var(--ink3);animation:bou .9s infinite}
+.typing span:nth-child(2){animation-delay:.15s}
+.typing span:nth-child(3){animation-delay:.3s}
+@keyframes bou{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
+
+/* knowledge */
+.kb-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kcard{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px;cursor:pointer;transition:all .15s}
+.kcard:hover{border-color:var(--ink3);transform:translateY(-1px)}
+.kcard-icon{font-size:18px;margin-bottom:8px}
+.kcard-title{font-weight:600;font-size:12px;margin-bottom:4px}
+.kcard-desc{font-size:11px;color:var(--ink3);line-height:1.5}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:30px}
+.overlay.on{display:flex}
+.modal{background:#fff;border-radius:8px;max-width:600px;width:100%;max-height:82vh;overflow-y:auto;padding:24px;position:relative}
+.modal-x{position:absolute;top:12px;right:14px;cursor:pointer;font-size:18px;color:var(--ink3);background:none;border:none;line-height:1}
+.modal-title{font-family:'Shippori Mincho',serif;font-size:18px;margin-bottom:14px}
+.ksec{margin-bottom:14px}
+.ksec-title{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.ksec-body{font-size:12px;line-height:1.8;color:var(--ink2)}
+
+/* revenue */
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:6px;overflow:hidden;border:1px solid var(--border);margin-bottom:20px}
+th{background:var(--ink);color:#fff;padding:9px 12px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;text-align:left}
+td{padding:10px 12px;font-size:12px;border-bottom:1px solid var(--border);color:var(--ink2)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--paper)}
+.rev-total{font-family:'Shippori Mincho',serif;font-size:22px;color:var(--green)}
+.rev-box{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:18px;margin-bottom:20px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <span class="logo">北陸 <b>Bridge</b> Navigator</span>
+  <span class="chip live">Agent active</span>
+  <span class="chip">Hokuriku SME</span>
+  <span class="chip">3-phase strategy</span>
+  <span id="top-date"></span>
+</div>
+
+<!-- API KEY BAR -->
+<div class="keybar">
+  <span class="key-dot" id="kdot"></span>
+  <span>API Key:</span>
+  <input type="password" id="kInput" placeholder="Paste your Anthropic API key here  (sk-ant-...)" oninput="onKey(this.value)">
+  <span id="key-status">Not set</span>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="nav-group">Command</div>
+  <div class="nav-item on" id="nav-dash" onclick="go('dash',this)"><span class="dot"></span>Dashboard</div>
+  <div class="nav-item" id="nav-tasks" onclick="go('tasks',this)"><span class="dot"></span>Tasks<span id="tbadge">0</span></div>
+  <div class="nav-item" id="nav-chat" onclick="go('chat',this)"><span class="dot"></span>Strategy Agent</div>
+  <div class="nav-group">Reference</div>
+  <div class="nav-item" id="nav-kb" onclick="go('kb',this)"><span class="dot"></span>Knowledge Base</div>
+  <div class="nav-item" id="nav-rev" onclick="go('rev',this)"><span class="dot"></span>Revenue Model</div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- DASHBOARD -->
+<div class="panel on" id="panel-dash">
+<div class="scroll">
+  <div class="page-title">Your Japan Export Business</div>
+  <div class="page-sub">Embedded Cultural Navigator · Hokuriku SME Marketing · Japan Sourcing Hub</div>
+  <div class="cards3">
+    <div class="card r"><div class="clabel">Current Phase</div><div class="cval">1</div><div class="cdesc">SME Marketing Retainer</div></div>
+    <div class="card a"><div class="clabel">Target Clients</div><div class="cval">3</div><div class="cdesc">Hokuriku manufacturers</div></div>
+    <div class="card g"><div class="clabel">Est. Annual Revenue</div><div class="cval">¥3.78M</div><div class="cdesc">3 clients × ¥1.26M</div></div>
+  </div>
+  <div class="phases">
+    <div class="pcard">
+      <div class="pnum">Phase 01 / Now</div><div class="ptitle">SME Marketing Retainer</div>
+      <div class="pbadge now">● Active</div>
+      <ul class="plist"><li>First SME outreach</li><li>Trust Package delivery</li><li>Retainer conversion</li><li>WhatsApp agent setup</li><li>n8n social pipeline</li></ul>
+    </div>
+    <div class="pcard">
+      <div class="pnum">Phase 02 / Near-term</div><div class="ptitle">Japan Sourcing Hub</div>
+      <div class="pbadge build">◌ Building</div>
+      <ul class="plist"><li>Report templates ready</li><li>Inbound demand growth</li><li>SME case studies</li><li>$299–799 tier reports</li></ul>
+    </div>
+    <div class="pcard">
+      <div class="pnum">Phase 03 / Long-term</div><div class="ptitle">Japan Export Intelligence</div>
+      <div class="pbadge future">◎ Future</div>
+      <ul class="plist"><li>Subscription product</li><li>Export market dashboards</li><li>B2B intelligence tiers</li><li>Regional credibility</li></ul>
+    </div>
+  </div>
+  <div class="cards3">
+    <div class="card a"><div class="clabel">Entry Point</div><div class="cval" style="font-size:15px;margin-top:4px">Trust Package</div><div class="cdesc">¥120,000 one-time project</div></div>
+    <div class="card b"><div class="clabel">Monthly Retainer</div><div class="cval">¥80K</div><div class="cdesc">Per SME client / month</div></div>
+    <div class="card o"><div class="clabel">Your Advantage</div><div class="cval" style="font-size:15px;margin-top:4px">Trilingual</div><div class="cdesc">JP + EN + CN · Hokuriku embedded</div></div>
+  </div>
+</div>
+</div>
+
+<!-- TASKS -->
+<div class="panel" id="panel-tasks">
+<div class="scroll">
+  <div class="toolbar">
+    <div class="ttitle">Task Tracker</div>
+    <div class="ftabs">
+      <button class="ftab on" onclick="filt('all',this)">All</button>
+      <button class="ftab" onclick="filt('now',this)">Now</button>
+      <button class="ftab" onclick="filt('soon',this)">Soon</button>
+      <button class="ftab" onclick="filt('later',this)">Later</button>
+    </div>
+    <button class="btn btn-p" onclick="toggleAdd()">+ Add task</button>
+  </div>
+  <div class="add-form" id="addForm">
+    <div class="add-row">
+      <input type="text" id="newTitle" placeholder="Task description..." onkeydown="if(event.key==='Enter')addTask()">
+      <select id="newPri"><option value="now">Now</option><option value="soon" selected>Soon</option><option value="later">Later</option></select>
+      <button class="btn btn-p" onclick="addTask()">Save</button>
+    </div>
+  </div>
+  <div id="taskList"></div>
+</div>
+</div>
+
+<!-- CHAT -->
+<div class="panel" id="panel-chat">
+<div class="chat-wrap">
+  <div class="chat-main">
+    <div class="chat-msgs" id="chatMsgs"></div>
+    <div class="chat-foot">
+      <div class="chat-row">
+        <textarea class="cinput" id="chatIn" placeholder="Ask about strategy, pitch scripts, pricing, next steps..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+        <button class="csend" id="sendBtn" onclick="send()">Send</button>
+      </div>
+    </div>
+  </div>
+  <div class="chat-side">
+    <div class="side-title">Quick prompts</div>
+    <button class="qbtn" onclick="q('What should I do this week to get my first SME client?')">What to do this week?</button>
+    <button class="qbtn" onclick="q('Draft a cold email in Japanese to a Hokuriku manufacturer.')">Cold email in Japanese</button>
+    <button class="qbtn" onclick="q('What should I include in the Trust Package for a lacquerware SME?')">Trust Package contents</button>
+    <button class="qbtn" onclick="q('How do I handle early contract termination by an SME client?')">Handle early termination</button>
+    <button class="qbtn" onclick="q('Explain the n8n WhatsApp agent setup step by step.')">n8n WhatsApp setup</button>
+    <button class="qbtn" onclick="q('What is my competitive advantage over a regular marketing agency?')">My competitive advantage</button>
+    <button class="qbtn" onclick="q('How do I price the foreign buyer advisory service?')">Pricing the advisory</button>
+    <div class="side-title">Active context</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">
+      <span class="chip" style="font-size:10px">SME retainer</span>
+      <span class="chip" style="font-size:10px">n8n pipelines</span>
+      <span class="chip" style="font-size:10px">Trust Package</span>
+      <span class="chip" style="font-size:10px">WhatsApp agent</span>
+      <span class="chip" style="font-size:10px">Japan pain points</span>
+      <span class="chip" style="font-size:10px">Pitch scripts</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- KNOWLEDGE BASE -->
+<div class="panel" id="panel-kb">
+<div class="scroll">
+  <div class="page-title">Knowledge Base</div>
+  <div class="page-sub">Click any card to expand the full reference.</div>
+  <div class="kb-grid">
+    <div class="kcard" onclick="openKB('model')"><div class="kcard-icon">🏗</div><div class="kcard-title">Embedded Cultural Navigator Model</div><div class="kcard-desc">3-layer service architecture, win-win framework, cultural alignment principles.</div></div>
+    <div class="kcard" onclick="openKB('pitch')"><div class="kcard-icon">🗣</div><div class="kcard-title">Pitch Scripts & First Contact</div><div class="kcard-desc">In-person, cold email, JETRO intro scripts in Japanese and English.</div></div>
+    <div class="kcard" onclick="openKB('services')"><div class="kcard-icon">📦</div><div class="kcard-title">Service Packages & Pricing</div><div class="kcard-desc">Trust Package, retainer tiers, add-ons, onboarding fee structure.</div></div>
+    <div class="kcard" onclick="openKB('protection')"><div class="kcard-icon">🛡</div><div class="kcard-title">Client Protection Clauses</div><div class="kcard-desc">2-month minimum, onboarding fee, milestone payments, contract terms.</div></div>
+    <div class="kcard" onclick="openKB('tech')"><div class="kcard-icon">⚙️</div><div class="kcard-title">Tech Stack & Automations</div><div class="kcard-desc">n8n pipelines: social, email translation, WhatsApp agent.</div></div>
+    <div class="kcard" onclick="openKB('japan')"><div class="kcard-icon">🇯🇵</div><div class="kcard-title">Japan Market Pain Points</div><div class="kcard-desc">10 structural pain points: nemawashi, keiretsu, giri, language gap.</div></div>
+  </div>
+</div>
+<div class="overlay" id="kbOverlay" onclick="if(event.target===this)closeKB()">
+  <div class="modal"><button class="modal-x" onclick="closeKB()">✕</button><div id="kbContent"></div></div>
+</div>
+</div>
+
+<!-- REVENUE -->
+<div class="panel" id="panel-rev">
+<div class="scroll">
+  <div class="page-title">Revenue Model</div>
+  <div class="page-sub">Pricing tiers, milestone structure, and annual projections.</div>
+  <table>
+    <thead><tr><th>Service</th><th>Type</th><th>Price</th><th>Frequency</th></tr></thead>
+    <tbody>
+      <tr><td>Trust Package</td><td>Project</td><td>¥80,000–150,000</td><td>One-time per client</td></tr>
+      <tr><td>Communication Bridge Retainer</td><td>Retainer</td><td>¥60,000–100,000</td><td>Monthly</td></tr>
+      <tr><td>Managed Inquiry Handling</td><td>Add-on</td><td>¥20,000–30,000</td><td>Monthly</td></tr>
+      <tr><td>Foreign Buyer Advisory</td><td>Consulting</td><td>¥30,000–80,000</td><td>Per engagement</td></tr>
+      <tr><td>Shokai (referral) introduction</td><td>Referral</td><td>¥50,000–100,000</td><td>Per intro</td></tr>
+      <tr><td>Japan Sourcing Hub report</td><td>Product</td><td>$299–799</td><td>Per report</td></tr>
+      <tr><td>Onboarding protection fee</td><td>One-time</td><td>¥25,000</td><td>Before month 1</td></tr>
+    </tbody>
+  </table>
+  <div class="rev-box">
+    <div style="font-size:11px;color:var(--ink3);margin-bottom:4px">Estimated annual revenue — 3 clients</div>
+    <div class="rev-total">¥3,780,000 / year</div>
+    <div style="font-size:11px;color:var(--ink3);margin-top:6px">Trust Packages ¥360K + Retainers ¥2.88M + Advisory ¥360K + Other ¥180K</div>
+  </div>
+  <table>
+    <thead><tr><th>Milestone</th><th>Trigger</th><th>Min. Guaranteed</th></tr></thead>
+    <tbody>
+      <tr><td>Before work starts</td><td>Onboarding fee</td><td>¥25,000</td></tr>
+      <tr><td>Month 1 start</td><td>50% retainer upfront</td><td>¥25,000–50,000</td></tr>
+      <tr><td>Month 1 delivery</td><td>50% on output delivery</td><td>¥25,000–50,000</td></tr>
+      <tr><td>Month 2 complete</td><td>Min. commitment met</td><td>¥75,000–100,000 total</td></tr>
+    </tbody>
+  </table>
+</div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ── API KEY ──────────────────────────────────────────────
+var apiKey = localStorage.getItem('bn_key') || '';
+(function(){
+  document.getElementById('kInput').value = apiKey;
+  updateKeyUI(apiKey);
+  document.getElementById('top-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+})();
+
+function onKey(v){
+  apiKey = v.trim();
+  localStorage.setItem('bn_key', apiKey);
+  updateKeyUI(apiKey);
+}
+function updateKeyUI(k){
+  var dot = document.getElementById('kdot');
+  var st  = document.getElementById('key-status');
+  if(k && k.length > 20){
+    dot.className = 'key-dot ok';
+    st.textContent = 'Connected';
+    st.style.color = '#2d6a4f';
+  } else {
+    dot.className = 'key-dot';
+    st.textContent = k ? 'Invalid key' : 'Not set — paste key above to enable AI chat';
+    st.style.color = '#888';
+  }
+}
+
+// ── NAVIGATION ───────────────────────────────────────────
+function go(name, el){
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('on'); });
+  document.getElementById('panel-'+name).classList.add('on');
+  el.classList.add('on');
+  if(name === 'chat' && chatHistory.length === 0) initChat();
+}
+
+// ── TASKS ────────────────────────────────────────────────
+var taskFilter = 'all';
+var tasks = [];
+var DEFAULT_TASKS = [
+  {id:1, title:'Identify 3 target Hokuriku SMEs for first outreach', priority:'now', done:false},
+  {id:2, title:'Prepare Trust Package sample for lacquerware category', priority:'now', done:false},
+  {id:3, title:'Draft one-page service agreement with 2-month minimum clause', priority:'now', done:false},
+  {id:4, title:'Open first SME conversation with a warm contact', priority:'now', done:false},
+  {id:5, title:'Request JETRO introduction through university', priority:'soon', done:false},
+  {id:6, title:'Run free website audit on a target SME before first meeting', priority:'soon', done:false},
+  {id:7, title:'Set up WATI account for WhatsApp Business API', priority:'soon', done:false},
+  {id:8, title:'Build n8n social posting pipeline (LinkedIn first)', priority:'soon', done:false},
+  {id:9, title:'Set up Japan Sourcing Hub report template', priority:'later', done:false},
+  {id:10, title:'Create WhatsApp agent knowledge base for first SME client', priority:'later', done:false}
+];
+
+(function(){
+  var saved = localStorage.getItem('bn_tasks');
+  tasks = saved ? JSON.parse(saved) : DEFAULT_TASKS.map(function(t){ return Object.assign({},t); });
+  renderTasks();
+})();
+
+function saveTasks(){
+  localStorage.setItem('bn_tasks', JSON.stringify(tasks));
+  renderTasks();
+}
+function filt(f, el){
+  taskFilter = f;
+  document.querySelectorAll('.ftab').forEach(function(b){ b.classList.remove('on'); });
+  el.classList.add('on');
+  renderTasks();
+}
+function toggleAdd(){
+  var f = document.getElementById('addForm');
+  f.classList.toggle('on');
+  if(f.classList.contains('on')) document.getElementById('newTitle').focus();
+}
+function addTask(){
+  var title = document.getElementById('newTitle').value.trim();
+  var pri   = document.getElementById('newPri').value;
+  if(!title) return;
+  tasks.push({id: Date.now(), title: title, priority: pri, done: false});
+  document.getElementById('newTitle').value = '';
+  document.getElementById('addForm').classList.remove('on');
+  saveTasks();
+}
+function toggleTask(id){
+  var t = tasks.find(function(x){ return x.id === id; });
+  if(t){ t.done = !t.done; saveTasks(); }
+}
+function deleteTask(id){
+  tasks = tasks.filter(function(x){ return x.id !== id; });
+  saveTasks();
+}
+function renderTasks(){
+  var show = taskFilter === 'all' ? tasks : tasks.filter(function(t){ return t.priority === taskFilter; });
+  var groups = {now:'This week', soon:'Next 2–4 weeks', later:'Phase 2 onwards'};
+  var html = '';
+  ['now','soon','later'].forEach(function(p){
+    var grp = show.filter(function(t){ return t.priority === p; });
+    if(!grp.length) return;
+    html += '<div class="tgroup"><div class="tgroup-label">'+groups[p]+'</div>';
+    grp.forEach(function(t){
+      html += '<div class="titem'+(t.done?' done':'')+'">'
+        +'<div class="tcheck'+(t.done?' on':'')+'" onclick="toggleTask('+t.id+')">'+(t.done?'✓':'')+'</div>'
+        +'<div class="tbody"><div class="ttext">'+t.title+'</div>'
+        +'<div><span class="ttag '+t.priority+'">'+(p==='now'?'This week':p==='soon'?'Soon':'Later')+'</span></div></div>'
+        +'<div class="tactions"><button class="btn btn-d" onclick="deleteTask('+t.id+')">✕</button></div>'
+        +'</div>';
+    });
+    html += '</div>';
+  });
+  if(!html) html = '<p style="color:var(--ink3);font-size:12px;padding:16px 0">No tasks in this view.</p>';
+  document.getElementById('taskList').innerHTML = html;
+  document.getElementById('tbadge').textContent = tasks.filter(function(t){ return !t.done; }).length;
+}
+
+// ── CHAT ─────────────────────────────────────────────────
+var chatHistory = [];
+var SYS = 'You are the Hokuriku Bridge Navigator — a strategic business agent for a trilingual graduate student in Hokuriku, Japan (Japanese, English, Chinese) building a consultancy helping Japanese SMEs expand internationally.\n\nFULL CONTEXT:\n\nPHASE 1 (current): SME Marketing Retainer. Embedded Cultural Navigator for Hokuriku manufacturers. Retainer ¥60K–100K/month. Entry: Trust Package ¥80K–150K one-time. Add-on: Managed inquiry handling ¥20K–30K/month. Protection: ¥25K non-refundable onboarding, 2-month minimum, 50/50 milestone payments. Target: craft manufacturers — lacquerware, metalwork, textiles, precision parts.\n\nPHASE 2: Japan Sourcing Hub — intelligence reports for foreign importers, $299–799/report.\n\nPHASE 3: Japan Export Intelligence — B2B subscription, export market dashboards.\n\nTHREE-LAYER SERVICE:\n1. Trust Package: English capability statement, compliance checklist, English FAQ, nemawashi guide reframing slow decisions as a strength.\n2. Communication Bridge: all foreign inquiries translated/routed, meeting prep notes, indirect cue interpretation (silence ≠ disinterest).\n3. Foreign Buyer Advisory: supplier onboarding, shokai introductions, ringi coaching.\n\nTECH STACK (n8n): Social pipeline: cron → Claude API → Google Sheets → LinkedIn/Instagram → client email. Email pipeline: Gmail trigger → Claude translate → SME inbox → Japanese reply → translate → send. WhatsApp agent: WATI ($40/mo) → Claude intent classification → auto-reply/translate-forward/escalate.\n\nJAPAN 10 PAIN POINTS: 1.Nemawashi/ringi (never force decisions, silence=building consensus) 2.Opaque hierarchies (real decision-maker often silent) 3.Keiretsu networks (shokai introductions only) 4.Language deeper than translation (indirect refusals, face-saving) 5.Extreme quality demands 6.Supplier loyalty/giri 7.Risk aversion 8.Regulatory complexity PSE/METI 9.Bilingual talent scarcity 10.Multi-layer distribution price erosion.\n\nPITCH SCRIPTS: In-person JP: 「最近、海外展開に興味があるとお聞きしました。実は私、金沢大学の研究者をしながら、北陸のメーカーさんが海外のバイヤーと繋がるお手伝いをしているんです。」 Cold email subject: 海外バイヤーへの発信について、少しご相談できますか Closing: 「まずは3ヶ月、お試しで。成果が出なければ続ける必要はありません。」 Free audit offer as door-opener.\n\nREVENUE (3 clients): ¥3.78M/year. CULTURAL: Nemawashi, Uchi/Soto, Shokai, Giri, Meiwaku avoidance.\n\nYOUR ADVANTAGE: Trilingual JP+EN+CN, physically in Hokuriku, graduate researcher credibility, lives in both cultures.\n\nAlways give specific, actionable advice. Provide complete scripts and templates when asked. Be direct but warm.';
+
+function initChat(){
+  chatHistory.push({role:'assistant', content:'こんにちは！ I\'m your Hokuriku Bridge Navigator — I have full context of your business strategy, all three phases, pitch scripts, pricing, Japan pain points, and n8n pipelines.\n\nAsk me anything: next steps, how to handle a specific situation, Japanese email drafts, pricing questions, or automation setup. What\'s on your mind?'});
+  renderMsgs();
+}
+function renderMsgs(){
+  var c = document.getElementById('chatMsgs');
+  c.innerHTML = '';
+  chatHistory.forEach(function(m){
+    var d = document.createElement('div');
+    d.className = 'msg ' + (m.role==='user' ? 'u' : 'a');
+    var fmt = m.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+    d.innerHTML = '<div class="avatar">'+(m.role==='user'?'You':'橋')+'</div><div class="bubble">'+fmt+'</div>';
+    c.appendChild(d);
+  });
+  c.scrollTop = c.scrollHeight;
+}
+function addTyping(){
+  var c = document.getElementById('chatMsgs');
+  var d = document.createElement('div');
+  d.className='msg a'; d.id='typing';
+  d.innerHTML='<div class="avatar">橋</div><div class="typing"><span></span><span></span><span></span></div>';
+  c.appendChild(d); c.scrollTop=c.scrollHeight;
+}
+function removeTyping(){ var t=document.getElementById('typing'); if(t) t.remove(); }
+
+function send(){
+  if(!apiKey || apiKey.length < 20){
+    alert('Please paste your Anthropic API key in the bar at the top.\n\nGet a free key at: console.anthropic.com → API Keys\n\nThe key starts with sk-ant-...');
+    return;
+  }
+  var inp = document.getElementById('chatIn');
+  var txt = inp.value.trim();
+  if(!txt) return;
+  inp.value = '';
+  chatHistory.push({role:'user', content:txt});
+  renderMsgs();
+  document.getElementById('sendBtn').disabled = true;
+  addTyping();
+
+  var msgs = chatHistory.slice(0,-1).map(function(m){ return {role:m.role, content:m.content}; });
+  msgs.push({role:'user', content:txt});
+
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: SYS,
+      messages: msgs
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    removeTyping();
+    var reply = (data.content && data.content[0] && data.content[0].text) ? data.content[0].text : (data.error ? 'Error: '+data.error.message : 'No response received.');
+    chatHistory.push({role:'assistant', content:reply});
+    renderMsgs();
+  })
+  .catch(function(e){
+    removeTyping();
+    chatHistory.push({role:'assistant', content:'Connection error: '+e.message+'\n\nPlease check your API key and internet connection.'});
+    renderMsgs();
+  })
+  .finally(function(){
+    document.getElementById('sendBtn').disabled = false;
+  });
+}
+
+function q(text){
+  go('chat', document.getElementById('nav-chat'));
+  setTimeout(function(){
+    document.getElementById('chatIn').value = text;
+    send();
+  }, chatHistory.length===0 ? 200 : 0);
+}
+
+// ── KNOWLEDGE BASE ────────────────────────────────────────
+var KB = {
+  model: {title:'Embedded Cultural Navigator Model', secs:[
+    {t:'Core Insight', b:'Japan\'s business friction is a trust and interpretation problem, not a communication problem. Position as a trusted bridge entity — part of the SME\'s extended uchi — representing them outward while coaching foreign clients on navigating inward. Both sides pay for the same person, for opposite reasons.'},
+    {t:'Layer 1 — Trust Package (¥80K–150K, one-time)', b:'English capability statement and craft heritage. Quality and compliance pre-screening checklist. English FAQ covering MOQ, lead time, customization, shipping, after-sales. "How to work with us" guide reframing nemawashi as a strength.'},
+    {t:'Layer 2 — Communication Bridge (¥60K–100K/month)', b:'All inbound/outbound foreign inquiries translated and routed. Replies drafted in English once SME approves in Japanese. Meeting preparation notes. Post-meeting follow-ups. Reading indirect cues — silence = consensus building, not disinterest.'},
+    {t:'Layer 3 — Foreign Buyer Advisory (¥30K–80K/engagement)', b:'Japan supplier onboarding guide. Warm shokai introductions. Negotiation coaching on hierarchy and ringi process. Product compliance pre-screening.'},
+    {t:'Cultural Alignment', b:'Nemawashi: build consensus gradually\nUchi/Soto: become part of SME inner circle\nShokai: referrals compound in value\nGiri: loyalty is sticky once trust is earned\nMeiwaku avoidance: protect both sides from embarrassment'}
+  ]},
+  pitch: {title:'Pitch Scripts & First Contact', secs:[
+    {t:'In-person (Japanese)', b:'「最近、海外展開に興味があるとお聞きしました。実は私、金沢大学の研究者をしながら、北陸のメーカーさんが海外のバイヤーと繋がるお手伝いをしているんです。英語でのSNS発信とか、海外からの問い合わせ対応とか。もしよろしければ、少しお話を聞かせてもらえますか？」'},
+    {t:'Cold Email Subject', b:'海外バイヤーへの発信について、少しご相談できますか'},
+    {t:'Cold Email Body', b:'初めてご連絡いたします。金沢大学で研究をしております[Your Name]と申します。北陸地域のメーカー様が海外市場へ展開される中で、英語での情報発信や海外からの問い合わせ対応にお困りのケースが多いと感じております。'},
+    {t:'Closing Phrase', b:'「まずは3ヶ月、お試しで。成果が出なければ続ける必要はありません。」'},
+    {t:'Free Audit Offer', b:'「では、まず一度、御社の英語発信を簡単に診断して、改善点をまとめた簡単なレポートをお持ちしましょうか。無料で結構です。それを見ていただいた上で、続けてご一緒できそうかお話しできれば。」'},
+    {t:'First Meeting Questions', b:'1. Are you currently receiving any inquiries from overseas?\n2. Do you have any English presence online?\n3. What countries or buyer types are you most interested in?\n4. Have you worked with anyone on international marketing before?'}
+  ]},
+  services: {title:'Service Packages & Pricing', secs:[
+    {t:'Trust Package — entry point', b:'Price: ¥80,000–150,000\nDeliverables: English capability statement, compliance checklist, English FAQ, nemawashi guide\nNatural conversion to monthly retainer.'},
+    {t:'Core Retainer — 3-month pilot', b:'Price: ¥50,000–80,000/month\nDeliverables: 8 English social posts/month, inbox monitoring, 1 content asset/month, 30-min check-in\nMinimum 2 months before any exit clause.'},
+    {t:'Managed Inquiry Handling (add-on)', b:'Price: ¥20,000–30,000/month\nTranslate incoming foreign emails, summarize in Japanese, draft English replies after SME approval.'},
+    {t:'WhatsApp Agent (premium add-on)', b:'Via WATI ~$40/month + setup\nModes: auto-reply (standard queries), translate-forward (complex), escalate (sensitive)\n24-hour messaging window rule applies.'},
+    {t:'Foreign Buyer Advisory', b:'Price: ¥30,000–80,000/engagement\nFor foreign importers navigating Japanese suppliers.\nIncludes: onboarding guide, shokai introductions, negotiation coaching, ringi guidance.'}
+  ]},
+  protection: {title:'Client Protection Clauses', secs:[
+    {t:'Non-refundable Onboarding Fee', b:'¥20,000–25,000 before month 1 begins.\nCovers brand voice research, English positioning audit, initial content calendar setup.\nFilters non-serious clients — pushback on this fee signals future behavior.'},
+    {t:'2-Month Minimum Commitment', b:'No exit before end of month 2.\nScript: 「マーケティングの効果は最低2ヶ月は見ないと判断できません。1ヶ月では何も変わらないので、お互いにとってもったいないです。」'},
+    {t:'Milestone Payment Structure', b:'Before work: ¥25,000 onboarding fee\nMonth 1 start: 50% retainer upfront\nMonth 1 delivery: 50% on output delivery\nTotal guaranteed before any exit: ¥75,000–100,000'},
+    {t:'Client Filter Principle', b:'Clients who resist a 2-month minimum or onboarding fee are revealing how they will behave throughout the engagement. Reasonable upfront friction selects only for committed clients.'}
+  ]},
+  tech: {title:'Tech Stack & Automations', secs:[
+    {t:'Social Posting Pipeline (n8n)', b:'Monthly cron trigger → Claude API generates 8 posts → Google Sheets logs content calendar → LinkedIn + Instagram publish → email summary to client.\nOptional: approval step before publish.'},
+    {t:'Email Translation Pipeline (n8n)', b:'INCOMING: Gmail trigger (foreign email) → Claude translates to Japanese → SME inbox\nOUTGOING: SME drafts in Japanese → n8n detects → Claude translates to English → sends to foreign client'},
+    {t:'WhatsApp Agent (n8n + WATI)', b:'WhatsApp Business API via WATI ($40/mo) → Claude classifies intent → AUTO-REPLY from knowledge base / TRANSLATE-FORWARD to SME via LINE / ESCALATE with alert to SME rep'},
+    {t:'SME Marketing Toolkit', b:'Three Claude API-powered tools: (1) English website audit with scores, (2) Social post generator — 5 posts with hashtags, (3) Product catalogue translation with localization notes'},
+    {t:'Hosting Options', b:'Self-hosted VPS: ~¥1,000/month (n8n free)\nCloud n8n: ~¥2,400/month (zero server management)\nRecommend cloud for the first 3 months while building client base.'}
+  ]},
+  japan: {title:'Japan Market Pain Points', secs:[
+    {t:'1. Nemawashi & Ringi', b:'Decisions pass through 30–40% more management layers than US companies. Never force a decision — it destroys trust. Silence = building internal consensus, not disinterest. Once consensus is reached, execution is faster than Western markets.'},
+    {t:'2. Opaque Hierarchies', b:'Real decision-maker often sits quietly or doesn\'t attend the meeting. Proposals must win quiet influencers, not just the most vocal participant.'},
+    {t:'3. Keiretsu & Distribution Networks', b:'Closed networks controlled by integrated business groups. New entrants need shokai (warm referral) introductions. Cold approaches rarely work.'},
+    {t:'4. Language Gap Deeper Than Translation', b:'Only ~10% speak English. Indirect refusals ("it\'s difficult" = no). Face-saving language. Non-verbal cues. Cultural interpretation is required beyond translation.'},
+    {t:'5 & 6. Quality Demands & Supplier Loyalty (Giri)', b:'5. Extreme quality demands — packaging, fit, finish, after-sales service all critical.\n6. Moral obligation to existing suppliers. Switching carries reputational risk within the organization.'},
+    {t:'7–10. Risk, Compliance, Talent, Distribution', b:'7. Risk aversion — need proven track record, local credibility\n8. PSE Law, Food Sanitation Act, METI compliance required\n9. Bilingual sales/marketing talent 60% hardest category to hire\n10. Multi-tier distribution erodes margins for foreign goods'}
+  ]}
+};
+
+function openKB(key){
+  var d = KB[key];
+  if(!d) return;
+  var html = '<div class="modal-title">'+d.title+'</div>';
+  d.secs.forEach(function(s){
+    html += '<div class="ksec"><div class="ksec-title">'+s.t+'</div><div class="ksec-body">'+s.b.replace(/\n/g,'<br>')+'</div></div>';
+  });
+  document.getElementById('kbContent').innerHTML = html;
+  document.getElementById('kbOverlay').classList.add('on');
+}
+function closeKB(){ document.getElementById('kbOverlay').classList.remove('on'); }
+</script>
+</body>
+</html>
